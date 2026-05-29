@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { io } from 'socket.io-client';
 import './App.css';
 import BulkUploadBanner from './components/BulkUploadBanner';
 import DemoCallout from './components/DemoCallout';
@@ -46,6 +47,63 @@ function App() {
       })
       .then((data) => setNotifications(data.notifications || []))
       .catch(() => {});
+  }, []);
+
+  // Socket.IO connection for real-time notifications
+  useEffect(() => {
+    const socket = io(API_BASE_URL, {
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 5
+    });
+
+    socket.on('connect', () => {
+      console.log('Connected to notification service');
+    });
+
+    socket.on('notification-created', (notification) => {
+      console.log('Notification received:', notification);
+      setNotifications((current) => [notification, ...current]);
+    });
+
+    socket.on('notifications-marked-read', () => {
+      console.log('All notifications marked as read');
+      setNotifications((current) => current.map((n) => ({ ...n, read: true })));
+    });
+
+    socket.on('notifications-cleared', () => {
+      console.log('Notifications cleared');
+      setNotifications([]);
+    });
+
+    socket.on('documents-uploaded', (data) => {
+      console.log('Documents uploaded:', data);
+      setDocuments((current) => [...data.documents, ...current]);
+      if (data.notification) {
+        setNotifications((current) => [data.notification, ...current]);
+      }
+    });
+
+    socket.on('document-deleted', (data) => {
+      console.log('Document deleted:', data);
+      setDocuments((current) => current.filter((doc) => doc.docId !== data.docId));
+      if (data.notification) {
+        setNotifications((current) => [data.notification, ...current]);
+      }
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Disconnected from notification service');
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   const addFiles = (fileList) => {

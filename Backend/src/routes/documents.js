@@ -124,6 +124,12 @@ router.delete("/:docId", async (req, res, next) => {
       message: `${document.name} was deleted.`
     });
 
+    // Emit deletion event to all connected clients
+    global.io.emit("document-deleted", { 
+      docId: document.docId,
+      notification 
+    });
+
     res.json({ message: "Document deleted successfully.", docId: document.docId, notification });
   } catch (error) {
     next(error);
@@ -159,6 +165,13 @@ router.post("/upload", upload.array("documents", 20), async (req, res, next) => 
     const notification = await Notification.create({
       type: "success",
       message: `${documents.length} document${documents.length === 1 ? "" : "s"} uploaded successfully.`
+    });
+
+    // Emit upload event to all connected clients
+    global.io.emit("documents-uploaded", {
+      documents,
+      notification,
+      uploadMode
     });
 
     res.status(201).json({
