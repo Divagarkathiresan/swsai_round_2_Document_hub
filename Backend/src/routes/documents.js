@@ -10,7 +10,10 @@ const router = express.Router();
 const storage = multer.memoryStorage();
 
 const pdfOnly = (_req, file, cb) => {
-  if (file.mimetype !== "application/pdf") {
+  const isPdf =
+    file.mimetype === "application/pdf" || file.originalname.toLowerCase().endsWith(".pdf");
+
+  if (!isPdf) {
     cb(new Error("Only PDF files are allowed."));
     return;
   }
@@ -45,7 +48,11 @@ const uploadToGridFS = (file, docId) =>
     });
 
     uploadStream.on("error", reject);
-    uploadStream.on("finish", resolve);
+    uploadStream.on("finish", () => {
+      resolve({
+        _id: uploadStream.id
+      });
+    });
     uploadStream.end(file.buffer);
   });
 
@@ -66,6 +73,10 @@ router.get("/:docId/preview", async (req, res, next) => {
       return res.status(404).json({ message: "Document not found." });
     }
 
+    if (!document.fileId) {
+      return res.status(404).json({ message: "Stored file is not available for this document." });
+    }
+
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="${document.name}"`);
     getBucket().openDownloadStream(document.fileId).pipe(res);
@@ -80,6 +91,10 @@ router.get("/:docId/download", async (req, res, next) => {
 
     if (!document) {
       return res.status(404).json({ message: "Document not found." });
+    }
+
+    if (!document.fileId) {
+      return res.status(404).json({ message: "Stored file is not available for this document." });
     }
 
     res.setHeader("Content-Type", "application/pdf");
@@ -104,12 +119,12 @@ router.delete("/:docId", async (req, res, next) => {
       if (error.code !== "ENOENT") throw error;
     }
 
-    await Notification.create({
+    const notification = await Notification.create({
       type: "info",
       message: `${document.name} was deleted.`
     });
 
-    res.json({ message: "Document deleted successfully.", docId: document.docId });
+    res.json({ message: "Document deleted successfully.", docId: document.docId, notification });
   } catch (error) {
     next(error);
   }
@@ -141,26 +156,15 @@ router.post("/upload", upload.array("documents", 20), async (req, res, next) => 
 
     const documents = await Document.insertMany(uploadedFiles);
 
-    const notifications = [
-      {
-        type: "success",
-        message: `${documents.length} document${documents.length === 1 ? "" : "s"} uploaded successfully.`
-      }
-    ];
-
-    if (documents.length > 3) {
-      notifications.unshift({
-        type: "warning",
-        message: `Bulk upload detected: ${documents.length} files were uploaded at once.`
-      });
-    }
-
-    const savedNotifications = await Notification.insertMany(notifications);
+    const notification = await Notification.create({
+      type: "success",
+      message: `${documents.length} document${documents.length === 1 ? "" : "s"} uploaded successfully.`
+    });
 
     res.status(201).json({
       message: `${documents.length} document${documents.length === 1 ? "" : "s"} uploaded successfully.`,
       documents,
-      notifications: savedNotifications
+      notifications: [notification]
     });
   } catch (error) {
     next(error);

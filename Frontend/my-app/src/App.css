@@ -30,12 +30,29 @@ svg {
   background:
     linear-gradient(180deg, rgba(12, 99, 206, 0.1), rgba(255, 255, 255, 0) 360px),
     #f7fbff;
-  padding: 28px;
+  padding: 0 28px 28px;
 }
 
 .workspace {
   margin: 0 auto;
   max-width: 1180px;
+  padding-top: 28px;
+}
+
+.bulk-upload-banner {
+  align-items: center;
+  background: #f59e0b;
+  color: #ffffff;
+  display: flex;
+  font-size: 18px;
+  gap: 10px;
+  justify-content: center;
+  margin: 0 -28px;
+  min-height: 58px;
+  padding: 12px 18px;
+  position: sticky;
+  top: 0;
+  z-index: 30;
 }
 
 .topbar {
@@ -44,6 +61,13 @@ svg {
   gap: 20px;
   justify-content: space-between;
   margin-bottom: 24px;
+}
+
+.topbar-actions {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  position: relative;
 }
 
 .eyebrow {
@@ -95,36 +119,248 @@ h2 {
   width: 10px;
 }
 
-.upload-layout {
-  display: grid;
-  gap: 18px;
-  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
-}
-
-.upload-panel,
-.file-panel,
-.documents-band {
+.notification-button {
+  align-items: center;
   background: #ffffff;
-  border: 1px solid #d9e9fc;
+  border: 1px solid #d8e8fb;
   border-radius: 8px;
-  box-shadow: 0 22px 50px rgba(24, 72, 132, 0.1);
+  color: #0a63ce;
+  cursor: pointer;
+  display: inline-flex;
+  height: 44px;
+  justify-content: center;
+  position: relative;
+  width: 44px;
+}
+
+.notification-count {
+  align-items: center;
+  background: #d33232;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  color: #ffffff;
+  display: flex;
+  font-size: 11px;
+  font-weight: 700;
+  height: 20px;
+  justify-content: center;
+  min-width: 20px;
+  padding: 0 5px;
+  position: absolute;
+  right: -7px;
+  top: -7px;
+}
+
+.notification-drawer {
+  background: #ffffff;
+  border: 1px solid #d8e8fb;
+  border-radius: 14px;
+  box-shadow: 0 24px 54px rgba(24, 72, 132, 0.18);
+  max-height: 430px;
+  overflow: hidden;
+  position: absolute;
+  right: 0;
+  top: 54px;
+  width: min(420px, calc(100vw - 36px));
+  z-index: 20;
+}
+
+.notification-header {
+  align-items: center;
+  border-bottom: 1px solid #e2eefb;
+  display: flex;
+  justify-content: space-between;
+  padding: 18px 20px;
+}
+
+.notification-header strong {
+  color: #1e2a3b;
+  font-size: 22px;
+}
+
+.notification-header div {
+  display: flex;
+  gap: 12px;
+}
+
+.notification-header button {
+  background: transparent;
+  border: 0;
+  color: #0a63ce;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.notification-header button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.notification-list {
+  display: grid;
+  gap: 0;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.notification-item {
+  align-items: center;
+  background: #eef6ff;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 54px minmax(0, 1fr) 14px;
+  min-height: 94px;
+  padding: 14px 20px;
+}
+
+.notification-item.is-read {
+  background: #ffffff;
+}
+
+.notification-status-icon {
+  align-items: center;
+  background: #d8fae3;
+  border-radius: 50%;
+  color: #16b45a;
+  display: inline-flex;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
+}
+
+.notification-status-icon svg {
+  height: 24px;
+  width: 24px;
+}
+
+.notification-item p {
+  color: #2b3a50;
+  font-size: 20px;
+  line-height: 1.25;
+  margin: 0 0 6px;
+}
+
+.notification-item time,
+.notification-empty {
+  color: #667996;
+  font-size: 17px;
+}
+
+.unread-dot {
+  background: #3b82f6;
+  border-radius: 50%;
+  height: 12px;
+  width: 12px;
+}
+
+.notification-empty {
+  padding: 18px;
+  text-align: center;
+}
+
+.mode-tabs {
+  align-items: center;
+  border-bottom: 1px solid #d9e5f3;
+  display: flex;
+  gap: 22px;
+  margin: 8px -28px 30px;
+  padding: 0 max(28px, calc((100vw - 1180px) / 2 + 28px));
+}
+
+.mode-tabs button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  font-weight: 700;
+  gap: 8px;
+  padding: 16px 4px 18px;
+}
+
+.mode-tabs button.active {
+  border-bottom-color: #2563eb;
+  color: #2563eb;
+}
+
+.demo-callout {
+  align-items: flex-start;
+  background: #eef6ff;
+  border: 1px solid #cfe2ff;
+  border-radius: 8px;
+  color: #1d4ed8;
+  display: flex;
+  font-size: 17px;
+  gap: 10px;
+  line-height: 1.5;
+  margin-bottom: 28px;
+  padding: 16px 18px;
+}
+
+.demo-callout::before {
+  align-items: center;
+  border: 2px solid #2563eb;
+  border-radius: 50%;
+  content: 'i';
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 14px;
+  font-weight: 700;
+  height: 20px;
+  justify-content: center;
+  margin-top: 3px;
+  width: 20px;
+}
+
+.demo-callout > strong {
+  flex: 0 0 auto;
+}
+
+.upload-layout {
+  align-items: start;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
 }
 
 .upload-panel,
-.file-panel,
 .documents-band {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.upload-panel,
+.documents-band {
+  padding: 0;
+}
+
+.file-panel {
+  background: #ffffff;
+  border: 1px solid #dbe7f5;
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(24, 72, 132, 0.08);
+  max-height: calc(100vh - 150px);
+  overflow: hidden;
   padding: 18px;
+  position: sticky;
+  top: 86px;
 }
 
 .dropzone {
   align-items: center;
-  border: 2px dashed #8cbdf3;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.3);
+  border: 2px dashed #d8e3f0;
+  border-radius: 14px;
   color: #456683;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-height: 320px;
+  min-height: 335px;
   padding: 32px;
   text-align: center;
   transition: background 180ms ease, border-color 180ms ease;
@@ -142,14 +378,14 @@ h2 {
 
 .hero-icon {
   align-items: center;
-  background: #e9f3ff;
-  border-radius: 8px;
-  color: #0a63ce;
+  background: #eef4fb;
+  border-radius: 18px;
+  color: #94a3b8;
   display: flex;
-  height: 72px;
+  height: 78px;
   justify-content: center;
-  margin-bottom: 16px;
-  width: 72px;
+  margin-bottom: 30px;
+  width: 78px;
 }
 
 .hero-icon svg {
@@ -179,8 +415,37 @@ h2 {
 
 .dropzone p {
   line-height: 1.6;
-  margin-bottom: 22px;
+  margin-bottom: 18px;
   max-width: 440px;
+}
+
+.dropzone h2 {
+  color: #26364b;
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.upload-mode-pills {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+.upload-mode-pills span,
+.upload-mode-pills strong {
+  background: #eef4fb;
+  border-radius: 999px;
+  color: #1f2937;
+  font-weight: 700;
+  padding: 7px 14px;
+}
+
+.upload-mode-pills strong {
+  background: #dbeafe;
+  color: #2563eb;
 }
 
 .primary-button,
@@ -221,7 +486,7 @@ h2 {
   display: flex;
   gap: 16px;
   justify-content: space-between;
-  padding-top: 16px;
+  padding-top: 18px;
 }
 
 .selection-bar div {
@@ -235,7 +500,7 @@ h2 {
 }
 
 .progress-wrap {
-  margin-top: 16px;
+  margin-top: 18px;
 }
 
 .progress-label {
@@ -262,7 +527,7 @@ h2 {
 .notice {
   border-radius: 8px;
   font-weight: 700;
-  margin-top: 16px;
+  margin-top: 18px;
   padding: 13px 14px;
 }
 
@@ -285,6 +550,8 @@ h2 {
 }
 
 .panel-heading h2 {
+  color: #1f2937;
+  font-size: 20px;
   margin: 0;
 }
 
@@ -292,6 +559,9 @@ h2 {
   color: #5a7591;
   font-size: 14px;
   font-weight: 700;
+  align-items: center;
+  display: flex;
+  gap: 8px;
 }
 
 .file-list,
@@ -300,19 +570,80 @@ h2 {
   gap: 10px;
 }
 
+.file-list {
+  max-height: calc(100vh - 245px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
 .file-row,
 .document-row {
   align-items: center;
-  background: #f6faff;
-  border: 1px solid #e2eefb;
-  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #dbe7f5;
+  border-radius: 12px;
   display: grid;
   gap: 12px;
 }
 
 .file-row {
   grid-template-columns: auto minmax(0, 1fr) auto auto;
-  padding: 12px;
+  min-height: 82px;
+  padding: 14px 16px;
+}
+
+.file-row.is-uploading {
+  border-color: #bfdbfe;
+}
+
+.queue-file-icon {
+  align-items: center;
+  background: #eef4ff;
+  border-radius: 8px;
+  color: #2563eb;
+  display: inline-flex;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
+}
+
+.queue-file-main {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.queue-file-title {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.queue-file-title strong {
+  min-width: 0;
+}
+
+.queue-progress-track {
+  background: #edf2f7;
+  border-radius: 999px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.queue-progress-fill {
+  background: #3b82f6;
+  border-radius: inherit;
+  height: 100%;
+  transition: width 180ms ease;
+}
+
+.queue-progress-value {
+  color: #2563eb;
+  grid-column: 2;
+  justify-self: end;
+  text-align: right;
 }
 
 .file-row svg,
@@ -379,7 +710,7 @@ h2 {
 }
 
 .document-row {
-  grid-template-columns: auto minmax(180px, 1fr) 90px 150px 120px 130px;
+  grid-template-columns: auto minmax(160px, 1fr) 90px 150px 86px 120px 130px;
   min-height: 58px;
   padding: 12px 14px;
 }
@@ -421,6 +752,18 @@ h2 {
   width: 18px;
 }
 
+.spinner.light {
+  border-color: rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+}
+
+.spinner.inline {
+  border-width: 2px;
+  color: #64748b;
+  height: 16px;
+  width: 16px;
+}
+
 .spinner.tiny {
   border-width: 2px;
   height: 16px;
@@ -449,7 +792,11 @@ h2 {
 
 @media (max-width: 860px) {
   .app-shell {
-    padding: 18px;
+    padding: 0 18px 18px;
+  }
+
+  .bulk-upload-banner {
+    margin: 0 -18px;
   }
 
   .topbar,
@@ -458,8 +805,34 @@ h2 {
     flex-direction: column;
   }
 
+  .topbar-actions {
+    width: 100%;
+  }
+
   .upload-layout {
     grid-template-columns: 1fr;
+  }
+
+  .file-panel {
+    max-height: none;
+    overflow: visible;
+    position: static;
+  }
+
+  .file-list {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .mode-tabs {
+    margin-left: -18px;
+    margin-right: -18px;
+    padding: 0 18px;
+  }
+
+  .demo-callout {
+    display: block;
   }
 
   .dropzone {
@@ -469,6 +842,17 @@ h2 {
 
   .document-row {
     grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .file-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .file-row .icon-button.preview,
+  .file-row .icon-button.danger,
+  .queue-progress-value {
+    grid-column: 2;
+    justify-self: start;
   }
 
   .document-row span,

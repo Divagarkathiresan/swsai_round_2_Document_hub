@@ -27,6 +27,16 @@ router.post("/", async (req, res, next) => {
   }
 });
 
+router.patch("/read", async (_req, res, next) => {
+  try {
+    await Notification.updateMany({ read: false }, { $set: { read: true } });
+    const notifications = await Notification.find().sort({ createdAt: -1 }).limit(50);
+    res.json({ message: "Notifications marked as read.", notifications });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.delete("/", async (_req, res, next) => {
   try {
     await Notification.deleteMany({});

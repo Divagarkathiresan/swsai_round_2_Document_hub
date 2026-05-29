@@ -1,23 +1,15 @@
 import "dotenv/config";
 import cors from "cors";
 import express from "express";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 import { connectDB } from "./src/config/db.js";
 import { documentsRouter } from "./src/routes/documents.js";
 import { notificationsRouter } from "./src/routes/notifications.js";
 
 const app = express();
 const port = process.env.PORT || 5001;
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const uploadDir = path.resolve(__dirname, "uploads");
 const allowedOrigins = (process.env.CLIENT_ORIGIN || "http://localhost:3000,http://127.0.0.1:3000")
   .split(",")
   .map((origin) => origin.trim());
-
-fs.mkdirSync(uploadDir, { recursive: true });
 
 app.use(
   cors({

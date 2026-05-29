@@ -12,6 +12,11 @@ const notificationSchema = new mongoose.Schema(
       enum: ["info", "success", "warning", "error"],
       default: "info"
     },
+    read: {
+      type: Boolean,
+      default: false,
+      required: true
+    },
     createdAt: {
       type: Date,
       default: Date.now,

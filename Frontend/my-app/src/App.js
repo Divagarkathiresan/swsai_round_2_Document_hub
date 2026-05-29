@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import './App.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+const MIN_UPLOAD_LOADER_MS = 200;
 
 const bytesToSize = (bytes) => {
   if (!bytes) return '0 KB';
@@ -16,6 +17,13 @@ const formatDate = (date) =>
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
+  }).format(new Date(date));
+
+const formatTime = (date) =>
+  new Intl.DateTimeFormat('en', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
   }).format(new Date(date));
 
 const UploadIcon = () => (
@@ -60,6 +68,19 @@ const TrashIcon = () => (
   </svg>
 );
 
+const BellIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+    <path d="M10 21h4" />
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M20 6 9 17l-5-5" />
+  </svg>
+);
+
 function App() {
   const inputRef = useRef(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -68,6 +89,8 @@ function App() {
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [deletingDocId, setDeletingDocId] = useState('');
+  const [notifications, setNotifications] = useState([]);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
 
@@ -75,6 +98,8 @@ function App() {
     () => selectedFiles.reduce((total, file) => total + file.size, 0),
     [selectedFiles]
   );
+  const unreadCount = notifications.filter((notification) => !notification.read).length;
+  const showBulkUploadBanner = selectedFiles.length > 3 || (isUploading && selectedFiles.length > 3);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/documents`)
@@ -85,6 +110,16 @@ function App() {
       .then((data) => setDocuments(data.documents || []))
       .catch(() => setError('Unable to load existing documents. Start the backend and try again.'))
       .finally(() => setIsLoading(false));
+  }, []);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/notifications`)
+      .then((response) => {
+        if (!response.ok) throw new Error('Unable to load notifications.');
+        return response.json();
+      })
+      .then((data) => setNotifications(data.notifications || []))
+      .catch(() => {});
   }, []);
 
   const addFiles = (fileList) => {
@@ -110,6 +145,7 @@ function App() {
     selectedFiles.forEach((file) => formData.append('documents', file));
 
     const request = new XMLHttpRequest();
+    const uploadStartedAt = Date.now();
     request.open('POST', `${API_BASE_URL}/documents/upload`);
 
     request.upload.onprogress = (event) => {
@@ -119,22 +155,31 @@ function App() {
 
     request.onload = () => {
       const data = JSON.parse(request.responseText || '{}');
-      setIsUploading(false);
+      const remainingLoaderTime = Math.max(0, MIN_UPLOAD_LOADER_MS - (Date.now() - uploadStartedAt));
 
-      if (request.status >= 200 && request.status < 300) {
-        setDocuments((current) => [...(data.documents || []), ...current]);
-        setSelectedFiles([]);
-        setUploadProgress(100);
-        setNotice(data.message || 'Upload complete.');
-        return;
-      }
+      window.setTimeout(() => {
+        setIsUploading(false);
 
-      setError(data.message || 'Upload failed. Please try again.');
+        if (request.status >= 200 && request.status < 300) {
+          setDocuments((current) => [...(data.documents || []), ...current]);
+          setNotifications((current) => [...(data.notifications || []), ...current]);
+          setSelectedFiles([]);
+          setUploadProgress(100);
+          setNotice(data.message || 'Upload complete.');
+          return;
+        }
+
+        setError(data.message || 'Upload failed. Please try again.');
+      }, remainingLoaderTime);
     };
 
     request.onerror = () => {
-      setIsUploading(false);
-      setError('Upload failed. Check that the backend is running.');
+      const remainingLoaderTime = Math.max(0, MIN_UPLOAD_LOADER_MS - (Date.now() - uploadStartedAt));
+
+      window.setTimeout(() => {
+        setIsUploading(false);
+        setError('Upload failed. Check that the backend is running.');
+      }, remainingLoaderTime);
     };
 
     setIsUploading(true);
@@ -155,7 +200,7 @@ function App() {
   };
 
   const previewUploadedDocument = (document) => {
-    window.open(`${API_BASE_URL}/documents/${document.docId}/preview`, '_blank', 'noopener,noreferrer');
+    window.open(`${API_BASE_URL}/documents/${document.docId}/preview`, '_blank');
   };
 
   const downloadDocument = (document) => {
@@ -187,6 +232,9 @@ function App() {
       }
 
       setDocuments((current) => current.filter((item) => item.docId !== document.docId));
+      if (data.notification) {
+        setNotifications((current) => [data.notification, ...current]);
+      }
       setNotice(data.message || 'Document deleted successfully.');
     } catch (deleteError) {
       setError(deleteError.message || 'Delete failed. Please try again.');
@@ -195,19 +243,108 @@ function App() {
     }
   };
 
+  const clearNotifications = async () => {
+    setNotifications([]);
+    setIsNotificationOpen(false);
+
+    try {
+      await fetch(`${API_BASE_URL}/notifications`, { method: 'DELETE' });
+    } catch {
+      // The UI has already cleared; a future refresh will sync with the backend.
+    }
+  };
+
+  const markAllRead = async () => {
+    setNotifications((current) => current.map((notification) => ({ ...notification, read: true })));
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/notifications/read`, { method: 'PATCH' });
+      const data = await response.json();
+
+      if (response.ok) {
+        setNotifications(data.notifications || []);
+      }
+    } catch {
+      // Local read state is already updated.
+    }
+  };
+
   return (
     <main className="app-shell">
+      {showBulkUploadBanner && (
+        <div className="bulk-upload-banner">
+          <span className="spinner light" />
+          <strong>Upload in progress</strong>
+          <span>processing {selectedFiles.length} files in the background...</span>
+        </div>
+      )}
       <section className="workspace">
         <header className="topbar">
           <div>
             <p className="eyebrow">SWSAI Document Hub</p>
             <h1>Company PDF uploads</h1>
           </div>
-          <div className="status-pill">
-            <span />
-            Upload service
+          <div className="topbar-actions">
+            <button
+              className="notification-button"
+              type="button"
+              aria-label="Open notifications"
+              title="Notifications"
+              onClick={() => setIsNotificationOpen((isOpen) => !isOpen)}
+            >
+              <BellIcon />
+              {unreadCount > 0 && <span className="notification-count">{unreadCount}</span>}
+            </button>
+            <div className="status-pill">
+              <span />
+              Upload service
+            </div>
+            {isNotificationOpen && (
+              <div className="notification-drawer">
+                <div className="notification-header">
+                  <strong>Notifications</strong>
+                  <div>
+                    <button type="button" onClick={markAllRead} disabled={!unreadCount}>
+                      Mark all read
+                    </button>
+                    <button type="button" onClick={clearNotifications} disabled={!notifications.length}>
+                      Clear all
+                    </button>
+                  </div>
+                </div>
+                {notifications.length ? (
+                  <div className="notification-list">
+                    {notifications.map((notification) => (
+                      <div
+                        className={`notification-item ${notification.type} ${notification.read ? 'is-read' : ''}`}
+                        key={notification._id}
+                      >
+                        <span className="notification-status-icon">
+                          <CheckIcon />
+                        </span>
+                        <div>
+                          <p>{notification.message}</p>
+                          <time>{formatTime(notification.createdAt)}</time>
+                        </div>
+                        {!notification.read && <span className="unread-dot" />}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="notification-empty">No notifications yet.</div>
+                )}
+              </div>
+            )}
           </div>
         </header>
+
+        <div className="demo-callout">
+          <strong>Document upload</strong>
+          <span>
+            Upload <strong>1-3 files</strong> for a normal queue. Upload <strong>4 or more files</strong> to trigger
+            the bulk notification flow.
+          </span>
+        </div>
 
         <section className="upload-layout">
           <div className="upload-panel">
@@ -237,6 +374,11 @@ function App() {
                 <UploadIcon />
                 Choose PDFs
               </button>
+              <div className="upload-mode-pills">
+                <span>Single file</span>
+                <span>Bulk upload</span>
+                <strong>Try 4+ files to trigger notifications</strong>
+              </div>
               <input
                 ref={inputRef}
                 type="file"
@@ -282,19 +424,33 @@ function App() {
 
           <aside className="file-panel">
             <div className="panel-heading">
-              <h2>Ready queue</h2>
-              <span>Max 20 PDFs</span>
+              <h2>Upload Queue</h2>
+              <span>
+                {isUploading && <span className="spinner inline" />}
+                {selectedFiles.length ? `${selectedFiles.length} ${isUploading ? 'uploading' : 'queued'}` : 'Max 20 PDFs'}
+              </span>
             </div>
 
             {selectedFiles.length ? (
               <div className="file-list">
                 {selectedFiles.map((file, index) => (
-                  <div className="file-row" key={`${file.name}-${file.size}-${index}`}>
-                    <FileIcon />
-                    <div>
-                      <strong>{file.name}</strong>
-                      <span>{bytesToSize(file.size)}</span>
+                  <div className={`file-row ${isUploading ? 'is-uploading' : ''}`} key={`${file.name}-${file.size}-${index}`}>
+                    <span className="queue-file-icon">
+                      <FileIcon />
+                    </span>
+                    <div className="queue-file-main">
+                      <div className="queue-file-title">
+                        <strong>{file.name}</strong>
+                        <span>{bytesToSize(file.size)}</span>
+                      </div>
+                      <div className="queue-progress-track">
+                        <div
+                          className="queue-progress-fill"
+                          style={{ width: `${isUploading ? Math.max(uploadProgress, 8) : 0}%` }}
+                        />
+                      </div>
                     </div>
+                    {isUploading && <strong className="queue-progress-value">{Math.max(uploadProgress, 8)}%</strong>}
                     <button
                       className="icon-button preview"
                       type="button"
@@ -343,6 +499,7 @@ function App() {
                   <strong>{document.name}</strong>
                   <span>{bytesToSize(document.size)}</span>
                   <span className="tag">{document.type}</span>
+                  <span className="tag blue">{document.uploadMode || 'single'}</span>
                   <time>{formatDate(document.uploadDate)}</time>
                   <div className="document-actions">
                     <button
