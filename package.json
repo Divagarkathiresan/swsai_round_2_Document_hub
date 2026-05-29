@@ -1,0 +1,14 @@
+{
+  "name": "swsai-document-hub",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix Backend\" \"npm start --prefix Frontend/my-app\"",
+    "install:all": "npm install && npm install --prefix Backend && npm install --prefix Frontend/my-app",
+    "start": "npm run start --prefix Backend",
+    "build": "npm run build --prefix Frontend/my-app"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
