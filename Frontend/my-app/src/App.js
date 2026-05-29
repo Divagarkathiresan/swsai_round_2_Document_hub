@@ -132,7 +132,7 @@ function App() {
           </div>
           <div className="status-pill">
             <span />
-            Node + MongoDB
+            Upload service
           </div>
         </header>
 
@@ -250,13 +250,12 @@ function App() {
           ) : documents.length ? (
             <div className="document-table">
               {documents.map((document) => (
-                <div className="document-row" key={document._id}>
+                <div className="document-row" key={document.docId}>
                   <FileIcon />
-                  <strong>{document.originalName}</strong>
+                  <strong>{document.name}</strong>
                   <span>{bytesToSize(document.size)}</span>
-                  <span className="tag">{document.uploadType}</span>
-                  <span className="tag blue">{document.status}</span>
-                  <time>{formatDate(document.createdAt)}</time>
+                  <span className="tag">{document.type}</span>
+                  <time>{formatDate(document.uploadDate)}</time>
                 </div>
               ))}
             </div>

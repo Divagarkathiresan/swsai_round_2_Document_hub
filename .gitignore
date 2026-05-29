@@ -3,3 +3,7 @@ dist/
 .env
 uploads/
 .DS_Store
+
+/Backend/node_modules
+/Backend/dist
+/Backend/.env

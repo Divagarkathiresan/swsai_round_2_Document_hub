@@ -1,6 +1,7 @@
 import express from "express";
 import multer from "multer";
 import path from "path";
+import crypto from "crypto";
 import { fileURLToPath } from "url";
 import { Document } from "../models/Document.js";
 
@@ -37,7 +38,7 @@ const upload = multer({
 
 router.get("/", async (_req, res, next) => {
   try {
-    const documents = await Document.find().sort({ createdAt: -1 }).limit(50);
+    const documents = await Document.find().sort({ uploadDate: -1 }).limit(50);
     res.json({ documents });
   } catch (error) {
     next(error);
@@ -50,15 +51,12 @@ router.post("/upload", upload.array("documents", 20), async (req, res, next) => 
       return res.status(400).json({ message: "Please attach at least one PDF file." });
     }
 
-    const uploadType = req.files.length > 1 ? "bulk" : "single";
     const payload = req.files.map((file) => ({
-      originalName: file.originalname,
-      storedName: file.filename,
-      filePath: file.path,
-      mimeType: file.mimetype,
+      docId: crypto.randomUUID(),
+      name: file.originalname,
+      type: file.mimetype,
       size: file.size,
-      uploadType,
-      status: "uploaded"
+      uploadDate: new Date()
     }));
 
     const documents = await Document.insertMany(payload);

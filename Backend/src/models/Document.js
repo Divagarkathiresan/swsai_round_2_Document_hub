@@ -2,20 +2,17 @@ import mongoose from "mongoose";
 
 const documentSchema = new mongoose.Schema(
   {
-    originalName: {
+    docId: {
+      type: String,
+      unique: true,
+      required: true
+    },
+    name: {
       type: String,
       required: true,
       trim: true
     },
-    storedName: {
-      type: String,
-      required: true
-    },
-    filePath: {
-      type: String,
-      required: true
-    },
-    mimeType: {
+    type: {
       type: String,
       required: true
     },
@@ -23,19 +20,14 @@ const documentSchema = new mongoose.Schema(
       type: Number,
       required: true
     },
-    uploadType: {
-      type: String,
-      enum: ["single", "bulk"],
-      default: "single"
-    },
-    status: {
-      type: String,
-      enum: ["uploaded", "processing", "completed", "failed"],
-      default: "uploaded"
+    uploadDate: {
+      type: Date,
+      default: Date.now,
+      required: true
     }
   },
   {
-    timestamps: true
+    versionKey: false
   }
 );
 

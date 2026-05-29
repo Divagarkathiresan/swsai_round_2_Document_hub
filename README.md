@@ -18,8 +18,8 @@ npm run install:all
 npm run dev
 ```
 
-Client: `http://localhost:5173`
+Client: `http://localhost:3000`
 
 Server: `http://localhost:5001`
 
-The server reads MongoDB configuration from `server/.env`.
+The server reads MongoDB configuration from `Backend/.env`.
