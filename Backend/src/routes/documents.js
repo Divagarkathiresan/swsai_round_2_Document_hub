@@ -1,22 +1,13 @@
 import express from "express";
 import multer from "multer";
-import path from "path";
 import crypto from "crypto";
-import { fileURLToPath } from "url";
+import mongoose from "mongoose";
 import { Document } from "../models/Document.js";
+import { Notification } from "../models/Notification.js";
 
 const router = express.Router();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const uploadDir = path.resolve(__dirname, "../../uploads");
 
-const storage = multer.diskStorage({
-  destination: uploadDir,
-  filename: (_req, file, cb) => {
-    const safeName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_");
-    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}-${safeName}`);
-  }
-});
+const storage = multer.memoryStorage();
 
 const pdfOnly = (_req, file, cb) => {
   if (file.mimetype !== "application/pdf") {
@@ -36,10 +27,89 @@ const upload = multer({
   }
 });
 
+const getBucket = () =>
+  new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
+    bucketName: "documentFiles"
+  });
+
+const uploadToGridFS = (file, docId) =>
+  new Promise((resolve, reject) => {
+    const bucket = getBucket();
+    const uploadStream = bucket.openUploadStream(`${docId}.pdf`, {
+      contentType: file.mimetype,
+      metadata: {
+        docId,
+        originalName: file.originalname,
+        size: file.size
+      }
+    });
+
+    uploadStream.on("error", reject);
+    uploadStream.on("finish", resolve);
+    uploadStream.end(file.buffer);
+  });
+
 router.get("/", async (_req, res, next) => {
   try {
     const documents = await Document.find().sort({ uploadDate: -1 }).limit(50);
     res.json({ documents });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/:docId/preview", async (req, res, next) => {
+  try {
+    const document = await Document.findOne({ docId: req.params.docId });
+
+    if (!document) {
+      return res.status(404).json({ message: "Document not found." });
+    }
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="${document.name}"`);
+    getBucket().openDownloadStream(document.fileId).pipe(res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/:docId/download", async (req, res, next) => {
+  try {
+    const document = await Document.findOne({ docId: req.params.docId });
+
+    if (!document) {
+      return res.status(404).json({ message: "Document not found." });
+    }
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${document.name}"`);
+    getBucket().openDownloadStream(document.fileId).pipe(res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/:docId", async (req, res, next) => {
+  try {
+    const document = await Document.findOneAndDelete({ docId: req.params.docId });
+
+    if (!document) {
+      return res.status(404).json({ message: "Document not found." });
+    }
+
+    try {
+      await getBucket().delete(document.fileId);
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+
+    await Notification.create({
+      type: "info",
+      message: `${document.name} was deleted.`
+    });
+
+    res.json({ message: "Document deleted successfully.", docId: document.docId });
   } catch (error) {
     next(error);
   }
@@ -51,18 +121,46 @@ router.post("/upload", upload.array("documents", 20), async (req, res, next) => 
       return res.status(400).json({ message: "Please attach at least one PDF file." });
     }
 
-    const payload = req.files.map((file) => ({
-      docId: crypto.randomUUID(),
-      name: file.originalname,
-      type: file.mimetype,
-      size: file.size,
-      uploadDate: new Date()
-    }));
+    const uploadMode = req.files.length > 1 ? "bulk" : "single";
+    const uploadedFiles = await Promise.all(
+      req.files.map(async (file) => {
+        const docId = crypto.randomUUID();
+        const gridFile = await uploadToGridFS(file, docId);
 
-    const documents = await Document.insertMany(payload);
+        return {
+          docId,
+          fileId: gridFile._id,
+          name: file.originalname,
+          type: file.mimetype,
+          size: file.size,
+          uploadDate: new Date(),
+          uploadMode
+        };
+      })
+    );
+
+    const documents = await Document.insertMany(uploadedFiles);
+
+    const notifications = [
+      {
+        type: "success",
+        message: `${documents.length} document${documents.length === 1 ? "" : "s"} uploaded successfully.`
+      }
+    ];
+
+    if (documents.length > 3) {
+      notifications.unshift({
+        type: "warning",
+        message: `Bulk upload detected: ${documents.length} files were uploaded at once.`
+      });
+    }
+
+    const savedNotifications = await Notification.insertMany(notifications);
+
     res.status(201).json({
       message: `${documents.length} document${documents.length === 1 ? "" : "s"} uploaded successfully.`,
-      documents
+      documents,
+      notifications: savedNotifications
     });
   } catch (error) {
     next(error);

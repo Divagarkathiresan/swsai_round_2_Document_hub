@@ -7,6 +7,10 @@ const documentSchema = new mongoose.Schema(
       unique: true,
       required: true
     },
+    fileId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true
+    },
     name: {
       type: String,
       required: true,
@@ -23,6 +27,12 @@ const documentSchema = new mongoose.Schema(
     uploadDate: {
       type: Date,
       default: Date.now,
+      required: true
+    },
+    uploadMode: {
+      type: String,
+      enum: ["single", "bulk"],
+      default: "single",
       required: true
     }
   },

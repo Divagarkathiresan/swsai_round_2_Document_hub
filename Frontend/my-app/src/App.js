@@ -35,6 +35,31 @@ const FileIcon = () => (
   </svg>
 );
 
+const EyeIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+const DownloadIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M12 3v12" />
+    <path d="m7 10 5 5 5-5" />
+    <path d="M5 21h14" />
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M3 6h18" />
+    <path d="M8 6V4h8v2" />
+    <path d="m19 6-1 14H6L5 6" />
+    <path d="M10 11v5" />
+    <path d="M14 11v5" />
+  </svg>
+);
+
 function App() {
   const inputRef = useRef(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -42,6 +67,7 @@ function App() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [deletingDocId, setDeletingDocId] = useState('');
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
 
@@ -122,6 +148,53 @@ function App() {
     setSelectedFiles((files) => files.filter((_, index) => index !== indexToRemove));
   };
 
+  const previewSelectedFile = (file) => {
+    const previewUrl = URL.createObjectURL(file);
+    window.open(previewUrl, '_blank', 'noopener,noreferrer');
+    window.setTimeout(() => URL.revokeObjectURL(previewUrl), 30000);
+  };
+
+  const previewUploadedDocument = (document) => {
+    window.open(`${API_BASE_URL}/documents/${document.docId}/preview`, '_blank', 'noopener,noreferrer');
+  };
+
+  const downloadDocument = (document) => {
+    const link = window.document.createElement('a');
+    link.href = `${API_BASE_URL}/documents/${document.docId}/download`;
+    link.download = document.name;
+    window.document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  const deleteDocument = async (document) => {
+    const shouldDelete = window.confirm(`Delete ${document.name}?`);
+
+    if (!shouldDelete) return;
+
+    setDeletingDocId(document.docId);
+    setError('');
+    setNotice('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/documents/${document.docId}`, {
+        method: 'DELETE'
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Delete failed.');
+      }
+
+      setDocuments((current) => current.filter((item) => item.docId !== document.docId));
+      setNotice(data.message || 'Document deleted successfully.');
+    } catch (deleteError) {
+      setError(deleteError.message || 'Delete failed. Please try again.');
+    } finally {
+      setDeletingDocId('');
+    }
+  };
+
   return (
     <main className="app-shell">
       <section className="workspace">
@@ -147,10 +220,14 @@ function App() {
               }}
             >
               <div className="hero-icon">
-                <UploadIcon />
+                {isUploading ? <span className="upload-loader" /> : <UploadIcon />}
               </div>
-              <h2>Upload PDF documents</h2>
-              <p>Drop files here or choose individual and bulk PDFs from your device.</p>
+              <h2>{isUploading ? 'Uploading documents' : 'Upload PDF documents'}</h2>
+              <p>
+                {isUploading
+                  ? 'Keep this page open while your PDFs are sent to the document hub.'
+                  : 'Drop files here or choose individual and bulk PDFs from your device.'}
+              </p>
               <button
                 className="primary-button"
                 type="button"
@@ -219,13 +296,24 @@ function App() {
                       <span>{bytesToSize(file.size)}</span>
                     </div>
                     <button
-                      className="icon-button"
+                      className="icon-button preview"
+                      type="button"
+                      aria-label={`Preview ${file.name}`}
+                      title="Preview"
+                      onClick={() => previewSelectedFile(file)}
+                      disabled={isUploading}
+                    >
+                      <EyeIcon />
+                    </button>
+                    <button
+                      className="icon-button danger"
                       type="button"
                       aria-label={`Remove ${file.name}`}
+                      title="Remove"
                       onClick={() => removeFile(index)}
                       disabled={isUploading}
                     >
-                      x
+                      <TrashIcon />
                     </button>
                   </div>
                 ))}
@@ -256,6 +344,36 @@ function App() {
                   <span>{bytesToSize(document.size)}</span>
                   <span className="tag">{document.type}</span>
                   <time>{formatDate(document.uploadDate)}</time>
+                  <div className="document-actions">
+                    <button
+                      className="icon-button preview"
+                      type="button"
+                      aria-label={`Preview ${document.name}`}
+                      title="Preview"
+                      onClick={() => previewUploadedDocument(document)}
+                    >
+                      <EyeIcon />
+                    </button>
+                    <button
+                      className="icon-button download"
+                      type="button"
+                      aria-label={`Download ${document.name}`}
+                      title="Download"
+                      onClick={() => downloadDocument(document)}
+                    >
+                      <DownloadIcon />
+                    </button>
+                    <button
+                      className="icon-button danger"
+                      type="button"
+                      aria-label={`Delete ${document.name}`}
+                      title="Delete"
+                      onClick={() => deleteDocument(document)}
+                      disabled={deletingDocId === document.docId}
+                    >
+                      {deletingDocId === document.docId ? <span className="spinner tiny" /> : <TrashIcon />}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

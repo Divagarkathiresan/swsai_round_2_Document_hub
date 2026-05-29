@@ -6,6 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { connectDB } from "./src/config/db.js";
 import { documentsRouter } from "./src/routes/documents.js";
+import { notificationsRouter } from "./src/routes/notifications.js";
 
 const app = express();
 const port = process.env.PORT || 5001;
@@ -37,6 +38,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/documents", documentsRouter);
+app.use("/api/notifications", notificationsRouter);
 
 app.use((error, _req, res, _next) => {
   console.error(error);
